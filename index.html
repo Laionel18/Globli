@@ -3,611 +3,793 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Globli 2.0 - Vida Virtual</title>
+    <title>Globli: El Regreso</title>
     <style>
         :root {
             --primary: #4ECDC4;
             --accent: #FF6B6B;
             --dark: #2C3E50;
             --globli-skin: #00A896;
-            --bg-living: #E0EAFC;
-            --bg-kitchen: #FFF5E1;
-            --bg-bath: #D4F1F4;
-            --bg-bed: #2c3e50; /* Oscuro por defecto noche */
-            --bg-bed-day: #F3E5F5;
         }
 
-        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        * { box-sizing: border-box; user-select: none; touch-action: manipulation; }
         
         body {
             margin: 0; padding: 0;
-            font-family: 'Segoe UI', sans-serif;
-            background: #333;
+            font-family: 'Arial', sans-serif;
+            background: #222;
             height: 100vh;
             display: flex; justify-content: center; align-items: center;
             overflow: hidden;
         }
 
         #app {
-            width: 100%; max-width: 480px; height: 100%; max-height: 900px;
-            background: var(--bg-living);
+            width: 100%; max-width: 450px; height: 100%; max-height: 850px;
+            background: #e0f7fa;
             position: relative; display: flex; flex-direction: column;
-            transition: background 0.5s ease;
-            overflow: hidden;
+            overflow: hidden; border: 4px solid #333;
         }
 
-        /* --- UI Overlay --- */
-        .top-ui {
-            padding: 10px; background: rgba(255,255,255,0.8);
-            border-bottom: 2px solid rgba(0,0,0,0.1); z-index: 20;
-            display: flex; flex-direction: column; gap: 5px;
+        /* --- UI de Estados --- */
+        .stats-panel {
+            background: rgba(255,255,255,0.9);
+            padding: 10px; border-bottom: 2px solid #ccc;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+            z-index: 100;
         }
-        
-        .bars { display: flex; gap: 5px; justify-content: space-around; }
-        .bar-wrap { flex: 1; height: 10px; background: #ddd; border-radius: 5px; overflow: hidden; position: relative; }
-        .bar-fill { height: 100%; width: 100%; transition: width 0.5s, background 0.5s; }
-        .icon { font-size: 1.2rem; margin-right: 2px; }
+        .stat-item { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: bold; }
+        .bar-bg { flex: 1; height: 12px; background: #eee; border-radius: 6px; overflow: hidden; border: 1px solid #ddd; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.3s; }
 
-        .coins-badge {
-            position: absolute; top: 10px; right: 10px;
-            background: gold; padding: 5px 10px; border-radius: 20px;
-            font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 25;
+        .currency {
+            position: absolute; top: 70px; right: 10px;
+            background: gold; padding: 5px 15px; border-radius: 20px;
+            font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 90;
         }
 
-        /* --- Game World --- */
-        #game-world {
+        /* --- Escenario --- */
+        #stage {
             flex: 1; position: relative;
             display: flex; justify-content: center; align-items: center;
+            transition: background 0.5s;
         }
 
-        /* GLOBILI CHARACTER */
+        /* GLOBILI */
+        #globli-container { position: relative; z-index: 10; transition: transform 0.3s; }
+        
         #globli {
-            width: 180px; height: 180px;
+            width: 160px; height: 160px;
             background: radial-gradient(circle at 30% 30%, #40E0D0, var(--globli-skin));
             border-radius: 50% 50% 45% 45%;
             position: relative;
-            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.2);
-            animation: breathe 3s infinite ease-in-out;
-            transition: transform 0.2s, filter 0.5s;
-            cursor: pointer; z-index: 10;
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s;
         }
 
-        #globli.dirty-overlay::after {
-            content: ''; position: absolute; top:0; left:0; width:100%; height:100%;
-            background-image: radial-gradient(#6d4c41 20%, transparent 20%);
-            background-size: 50px 50px; opacity: 0.7; border-radius: inherit;
-            pointer-events: none;
-        }
-        
-        #globli.soaped::before {
-            content: ''; position: absolute; top:-10px; left:-10px; right:-10px; bottom:-10px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="white" opacity="0.5"/></svg>');
-            border-radius: 50%; opacity: 0.8; animation: bubbleFloat 5s linear infinite;
-            pointer-events: none;
+        .eyes { position: absolute; top: 40px; width: 100%; display: flex; justify-content: center; gap: 20px; }
+        .eye { width: 35px; height: 40px; background: white; border-radius: 50%; position: relative; }
+        .pupil { width: 15px; height: 15px; background: #222; border-radius: 50%; position: absolute; top: 15px; left: 10px; }
+        .mouth { 
+            width: 30px; height: 15px; border-bottom: 4px solid #222; 
+            border-radius: 0 0 15px 15px; position: absolute; bottom: 40px; left: 65px; 
         }
 
-        .eyes { position: absolute; top: 35%; width: 100%; display: flex; justify-content: center; gap: 25px; }
-        .eye { width: 45px; height: 50px; background: white; border-radius: 50%; position: relative; overflow: hidden; }
-        .pupil { width: 20px; height: 22px; background: #222; border-radius: 50%; position: absolute; top: 14px; left: 12px; transition: all 0.2s; }
-        .mouth {
-            width: 30px; height: 15px; border-bottom: 5px solid #222; border-radius: 0 0 20px 20px;
-            position: absolute; bottom: 25%; left: 50%; transform: translateX(-50%); transition: all 0.3s;
+        /* Modificadores Visuales */
+        .dirty { filter: sepia(0.5) saturate(1.5); }
+        .dirty::after {
+            content: '💩'; position: absolute; top: -20px; right: -20px; font-size: 30px;
         }
-
-        /* Estados Emocionales */
-        .sad .mouth { border-bottom: none; border-top: 5px solid #222; border-radius: 20px 20px 0 0; bottom: 20%; }
-        .sad .eye { height: 40px; border-radius: 50% 50% 40% 40%; }
-        .happy .eye { height: 40px; border-radius: 50% 50% 40% 40%; margin-top: 10px; }
-        .happy .mouth { width: 40px; height: 20px; }
-        .sleeping .eye { height: 5px; background: transparent; border-bottom: 4px solid #333; border-radius: 0; margin-top: 25px; }
+        .sad .mouth { border-bottom: none; border-top: 4px solid #222; border-radius: 15px 15px 0 0; transform: translateY(5px); }
+        .sleeping .eye { height: 4px; background: #333; margin-top: 20px; }
         .sleeping .pupil { display: none; }
-        .sleeping { animation: sleepFloat 4s infinite ease-in-out !important; filter: brightness(0.8); }
 
-        /* --- Room Objects --- */
-        .room-obj { position: absolute; pointer-events: none; transition: all 0.3s; }
-        
-        /* Poop */
-        .poop {
-            position: absolute; font-size: 2.5rem; cursor: pointer; z-index: 5;
-            animation: bounce 2s infinite; pointer-events: auto;
+        /* --- Herramientas e Interactivos --- */
+        .room-controls {
+            position: absolute; bottom: 20px; width: 100%;
+            display: flex; justify-content: center; gap: 20px; z-index: 50;
         }
-        
-        /* Bathroom Tools */
-        .tool-rack {
-            position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 20px;
-            display: none; /* Solo visible en baño */
-        }
-        .bath-tool {
-            width: 70px; height: 70px; background: white; border-radius: 15px;
-            display: flex; justify-content: center; align-items: center; font-size: 2.5rem;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: grab; z-index: 50; touch-action: none;
-        }
-        .bath-tool.dragging { position: fixed; transform: scale(1.2); opacity: 0.9; cursor: grabbing; pointer-events: none; }
-
-        /* Bedroom */
-        .lamp-switch {
-            position: absolute; top: 20px; right: 20px; width: 40px; height: 60px;
-            background: #eee; border: 2px solid #ccc; border-radius: 5px; cursor: pointer;
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .switch-knob { width: 10px; height: 20px; background: #333; border-radius: 2px; transition: transform 0.2s; }
-        .dark-overlay {
-            position: absolute; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,10, 0.85); pointer-events: none; opacity: 0; transition: opacity 1s; z-index: 15;
+        .tool {
+            width: 60px; height: 60px; background: white; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 30px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            touch-action: none;
         }
 
-        /* Kitchen */
-        .fridge-btn {
-            position: absolute; top: 15%; right: 10%; width: 100px; height: 180px;
-            background: #dfe6e9; border: 4px solid #b2bec3; border-radius: 10px;
-            cursor: pointer; display: none; text-align: center; padding-top: 20px;
-            box-shadow: inset -10px 0 20px rgba(0,0,0,0.1);
-        }
-        .fridge-handle { width: 8px; height: 40px; background: #b2bec3; position: absolute; left: 10px; top: 50%; }
-
-        /* --- Navigation --- */
-        .nav-bar {
-            background: white; padding: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
-            border-top: 2px solid #eee; z-index: 30;
+        /* --- Navegación --- */
+        .nav {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            background: white; border-top: 2px solid #ddd;
         }
         .nav-btn {
-            background: transparent; border: none; font-size: 1.5rem; cursor: pointer; opacity: 0.5;
-            display: flex; flex-direction: column; align-items: center;
+            padding: 15px 5px; border: none; background: none;
+            cursor: pointer; display: flex; flex-direction: column; align-items: center;
+            font-size: 20px; opacity: 0.6;
         }
-        .nav-btn span { font-size: 0.7rem; font-weight: bold; }
-        .nav-btn.active { opacity: 1; color: var(--primary); transform: scale(1.1); }
+        .nav-btn.active { opacity: 1; color: var(--primary); background: #f9f9f9; }
+        .nav-btn span { font-size: 10px; text-transform: uppercase; font-weight: bold; margin-top: 4px; }
 
-        /* --- Modals/Shop --- */
+        /* --- Modales --- */
         .modal {
-            position: absolute; top:0; left:0; width:100%; height:100%;
-            background: rgba(0,0,0,0.5); z-index: 100; display: none;
-            justify-content: center; align-items: center; backdrop-filter: blur(5px);
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 1000; display: none;
+            justify-content: center; align-items: center;
         }
         .modal-content {
-            background: white; width: 90%; max-height: 80%; overflow-y: auto;
-            border-radius: 15px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            text-align: center;
+            background: white; width: 85%; border-radius: 20px; padding: 20px;
+            text-align: center; max-height: 70%; overflow-y: auto;
         }
-        .grid-shop { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px; }
-        .shop-item {
-            border: 2px solid #eee; border-radius: 10px; padding: 10px; cursor: pointer; position: relative;
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .card { border: 2px solid #eee; padding: 10px; border-radius: 10px; cursor: pointer; }
+
+        /* --- Minijuego --- */
+        #game-canvas {
+            position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+            pointer-events: none; display: none;
         }
-        .shop-item:active { background: #f0f0f0; transform: scale(0.98); }
-        .qty-badge { position: absolute; top:5px; right:5px; background: var(--accent); color:white; font-size:0.7rem; padding: 2px 6px; border-radius: 10px; }
+        .target { 
+            position: absolute; width: 50px; height: 50px; background: var(--accent);
+            border-radius: 50%; pointer-events: auto; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; color: white;
+        }
 
-        /* Animations */
-        @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-        @keyframes sleepFloat { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.02); } }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-        @keyframes bubbleFloat { 0% { background-position: 0 0; } 100% { background-position: 0 -100px; } }
-        .hearts-anim { position: absolute; color: #ff0000; font-size: 1.5rem; animation: floatUp 1s forwards; pointer-events: none; font-weight: bold; }
-        @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity:1; } 100% { transform: translateY(-50px) scale(1.5); opacity:0; } }
-
+        /* --- Animaciones --- */
+        @keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
+        .floating { animation: float 2s infinite ease-in-out; }
+        
     </style>
 </head>
 <body>
 
 <div id="app">
-    <div class="top-ui">
-        <div class="coins-badge">💰 <span id="coin-disp">0</span></div>
-        <div class="bars">
-            <div class="bar-wrap"><div class="bar-fill" id="bar-hp" style="background:#FF6B6B"></div></div> <div class="bar-wrap"><div class="bar-fill" id="bar-hg" style="background:#F1C40F"></div></div> </div>
-        <div class="bars">
-            <div class="bar-wrap"><div class="bar-fill" id="bar-hy" style="background:#3498DB"></div></div> <div class="bar-wrap"><div class="bar-fill" id="bar-sl" style="background:#9B59B6"></div></div> <div class="bar-wrap"><div class="bar-fill" id="bar-ha" style="background:#2ECC71"></div></div> </div>
+    <div class="stats-panel">
+        <div class="stat-item">❤️ <div class="bar-bg"><div id="bar-hp" class="bar-fill" style="background:#ff4757"></div></div></div>
+        <div class="stat-item">🍕 <div class="bar-bg"><div id="bar-hg" class="bar-fill" style="background:#ffa502"></div></div></div>
+        <div class="stat-item">🧼 <div class="bar-bg"><div id="bar-hy" class="bar-fill" style="background:#2e97ff"></div></div></div>
+        <div class="stat-item">⚡ <div class="bar-bg"><div id="bar-en" class="bar-fill" style="background:#2ed573"></div></div></div>
     </div>
 
-    <div id="game-world">
-        <div class="dark-overlay" id="night-overlay"></div>
-        <div class="fridge-btn" id="fridge" onclick="game.ui.openFridge()">❄️<div class="fridge-handle"></div></div>
-        <div class="lamp-switch" id="lamp" onclick="game.actions.toggleLight()"><div class="switch-knob" id="knob"></div></div>
+    <div class="currency">💰 <span id="coins">100</span></div>
+
+    <div id="stage">
+        <div id="game-canvas"></div>
         
-        <div id="poop-container"></div>
-
-        <div id="globli" onclick="game.actions.pet(event)">
-            <div class="eyes">
-                <div class="eye"><div class="pupil"></div></div>
-                <div class="eye"><div class="pupil"></div></div>
+        <div id="globli-container" class="floating">
+            <div id="globli">
+                <div class="eyes">
+                    <div class="eye"><div class="pupil"></div></div>
+                    <div class="eye"><div class="pupil"></div></div>
+                </div>
+                <div class="mouth"></div>
             </div>
-            <div class="mouth"></div>
         </div>
 
-        <div class="tool-rack" id="bath-tools">
-            <div class="bath-tool" id="tool-soap" onmousedown="dragStart(event, 'soap')" ontouchstart="dragStart(event, 'soap')">🧼</div>
-            <div class="bath-tool" id="tool-shower" onmousedown="dragStart(event, 'shower')" ontouchstart="dragStart(event, 'shower')">🚿</div>
-        </div>
+        <div id="room-extras" class="room-controls"></div>
     </div>
 
-    <div class="nav-bar">
-        <button class="nav-btn" onclick="game.setRoom('living')">🎮<span>Sala</span></button>
-        <button class="nav-btn" onclick="game.setRoom('kitchen')">🍽️<span>Cocina</span></button>
-        <button class="nav-btn" onclick="game.setRoom('bathroom')">🛁<span>Baño</span></button>
-        <button class="nav-btn" onclick="game.setRoom('bedroom')">🛌<span>Cuarto</span></button>
+    <div class="nav">
+        <button class="nav-btn active" onclick="game.changeRoom('sala', this)">🏠<span>Sala</span></button>
+        <button class="nav-btn" onclick="game.changeRoom('cocina', this)">🍳<span>Cocina</span></button>
+        <button class="nav-btn" onclick="game.changeRoom('baño', this)">🛁<span>Baño</span></button>
+        <button class="nav-btn" onclick="game.changeRoom('cuarto', this)">🌙<span>Cuarto</span></button>
     </div>
 
-    <div class="modal" id="modal-main">
-        <div class="modal-content" id="modal-body">
-            </div>
+    <div id="modal" class="modal">
+        <div class="modal-content" id="modal-inner"></div>
     </div>
-
-    <div id="drag-proxy" style="position:fixed; pointer-events:none; z-index:999; font-size:3rem; display:none;"></div>
 </div>
 
 <script>
-    /* --- MOTOR DE AUDIO (Web Audio API) --- */
-    const audio = {
-        ctx: new (window.AudioContext || window.webkitAudioContext)(),
-        play(type) {
-            if(this.ctx.state === 'suspended') this.ctx.resume();
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.connect(gain); gain.connect(this.ctx.destination);
-            
-            const now = this.ctx.currentTime;
-            
-            if (type === 'pop') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(1200, now+0.1);
-                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.1);
-                osc.start(now); osc.stop(now+0.1);
-            } else if (type === 'eat') {
-                osc.type = 'triangle'; osc.frequency.setValueAtTime(200, now); osc.frequency.linearRampToValueAtTime(400, now+0.1);
-                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.15);
-                osc.start(now); osc.stop(now+0.15);
-            } else if (type === 'sad') {
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(100, now+0.4);
-                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.4);
-                osc.start(now); osc.stop(now+0.4);
-            } else if (type === 'happy') {
-                osc.type = 'sine';
-                [523, 659, 784].forEach((f, i) => {
-                    const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
-                    o.connect(g); g.connect(this.ctx.destination);
-                    o.frequency.value = f;
-                    g.gain.setValueAtTime(0.05, now + i*0.1); g.gain.linearRampToValueAtTime(0, now + i*0.1 + 0.2);
-                    o.start(now + i*0.1); o.stop(now + i*0.1 + 0.2);
-                });
-            } else if (type === 'shower') {
-                // White noise approximation for shower
-                const bufferSize = this.ctx.sampleRate * 0.2; // 0.2 seconds
-                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = this.ctx.createBufferSource();
-                noise.buffer = buffer;
-                const noiseFilter = this.ctx.createBiquadFilter();
-                noiseFilter.type = 'lowpass'; noiseFilter.frequency.value = 800;
-                noise.connect(noiseFilter); noiseFilter.connect(gain);
-                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.2);
-                noise.start(now);
-            }
-        }
-    };
-
-    /* --- LÓGICA DEL JUEGO --- */
     const game = {
-        data: {
-            stats: { health: 100, hunger: 100, hygiene: 100, energy: 100, happiness: 100 },
-            coins: 100,
-            inventory: { 'pizza': 2, 'burger': 1, 'apple': 5, 'sushi': 0, 'icecream': 1 },
-            lastSave: Date.now(),
-            isSleeping: false,
-            soapedLevel: 0, // 0-100
-        },
-        currentRoom: 'living',
-
-        init() {
-            this.load();
-            this.setRoom('living');
-            this.loop = setInterval(() => this.tick(), 2000); // Game tick cada 2s
-            this.render();
-        },
-
-        load() {
-            const saved = localStorage.getItem('globli2_save');
-            if(saved) this.data = JSON.parse(saved);
-        },
+        // Datos del estado
+        hp: 100, hg: 80, hy: 100, en: 100, coins: 100,
+        room: 'sala',
+        isSleeping: false,
+        inventory: { pizza: 1, manzana: 2, burger: 0 },
         
-        save() {
-            this.data.lastSave = Date.now();
-            localStorage.setItem('globli2_save', JSON.stringify(this.data));
+        init() {
+            this.updateUI();
+            this.startLoop();
+            this.changeRoom('sala', document.querySelector('.nav-btn'));
+            
+            // Hacer interactivo a Globli (Acariciar)
+            document.getElementById('globli').onclick = () => {
+                if(this.isSleeping) return;
+                this.hp = Math.min(100, this.hp + 2);
+                this.updateUI();
+                this.animateGlobli('scale(1.1)');
+            };
         },
 
-        tick() {
-            const s = this.data.stats;
+        startLoop() {
+            setInterval(() => {
+                if(this.isSleeping) {
+                    this.en = Math.min(100, this.en + 5);
+                    this.hg -= 0.5;
+                } else {
+                    this.hg -= 1;
+                    this.hy -= 0.5;
+                    this.en -= 0.5;
+                }
+                
+                if(this.hg < 20 || this.hy < 20 || this.en < 20) this.hp -= 1;
+                
+                this.updateUI();
+            }, 3000);
+        },
+
+        updateUI() {
+            document.getElementById('bar-hp').style.width = this.hp + '%';
+            document.getElementById('bar-hg').style.width = this.hg + '%';
+            document.getElementById('bar-hy').style.width = this.hy + '%';
+            document.getElementById('bar-en').style.width = this.en + '%';
+            document.getElementById('coins').innerText = this.coins;
+
+            const g = document.getElementById('globli');
+            g.className = '';
+            if(this.hy < 40) g.classList.add('dirty');
+            if(this.hg < 40 || this.hp < 40) g.parentElement.classList.add('sad'); else g.parentElement.classList.remove('sad');
+            if(this.isSleeping) g.parentElement.classList.add('sleeping'); else g.parentElement.classList.remove('sleeping');
+        },
+
+        changeRoom(roomName, btn) {
+            this.room = roomName;
             
-            // Degradación natural (si no duerme)
-            if (!this.data.isSleeping) {
-                s.hunger = Math.max(0, s.hunger - 1);
-                s.hygiene = Math.max(0, s.hygiene - 0.8);
-                s.energy = Math.max(0, s.energy - 0.5);
-                s.happiness = Math.max(0, s.happiness - 0.5);
+            // Actualizar botones nav
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const stage = document.getElementById('stage');
+            const extras = document.getElementById('room-extras');
+            extras.innerHTML = '';
+            document.getElementById('game-canvas').style.display = 'none';
+
+            if(roomName === 'sala') {
+                stage.style.background = "#e0f7fa";
+                extras.innerHTML = '<button class="tool" onclick="game.startMiniGame()">🎮</button>';
+                extras.innerHTML += '<button class="tool" onclick="game.openShop()">🛒</button>';
+            } 
+            else if(roomName === 'cocina') {
+                stage.style.background = "#fff9c4";
+                extras.innerHTML = '<button class="tool" onclick="game.openFridge()">❄️</button>';
+            } 
+            else if(roomName === 'baño') {
+                stage.style.background = "#e3f2fd";
+                extras.innerHTML = '<div class="tool" id="soap" onmousedown="game.drag(event, \'soap\')" ontouchstart="game.drag(event, \'soap\')">🧼</div>';
+                extras.innerHTML += '<div class="tool" id="shower" onmousedown="game.drag(event, \'shower\')" ontouchstart="game.drag(event, \'shower\')">🚿</div>';
+            } 
+            else if(roomName === 'cuarto') {
+                stage.style.background = this.isSleeping ? "#1a237e" : "#f3e5f5";
+                extras.innerHTML = `<button class="tool" onclick="game.toggleSleep()">${this.isSleeping ? '💡' : '💤'}</button>`;
+            }
+        },
+
+        // --- FUNCIONES DE COMIDA ---
+        openFridge() {
+            let html = '<h2>Mi Nevera</h2><div class="grid">';
+            for(let item in this.inventory) {
+                if(this.inventory[item] > 0) {
+                    html += `<div class="card" onclick="game.eat('${item}')">
+                                <div style="font-size:30px">${this.getIcon(item)}</div>
+                                <p>${item} (${this.inventory[item]})</p>
+                             </div>`;
+                }
+            }
+            html += '</div><button onclick="game.closeModal()" style="margin-top:20px">Cerrar</button>';
+            this.showModal(html);
+        },
+
+        eat(item) {
+            if(this.inventory[item] > 0) {
+                this.inventory[item]--;
+                this.hg = Math.min(100, this.hg + 20);
+                this.hp = Math.min(100, this.hp + 5);
+                this.animateGlobli('translateY(-20px) scale(1.1)');
+                this.closeModal();
+                this.updateUI();
+            }
+        },
+
+        openShop() {
+            const items = [
+                {id: 'pizza', p: 20, icon: '🍕'},
+                {id: 'manzana', p: 5, icon: '🍎'},
+                {id: 'burger', p: 15, icon: '🍔'}
+            ];
+            let html = '<h2>Tienda de Comida</h2><div class="grid">';
+            items.forEach(i => {
+                html += `<div class="card" onclick="game.buy('${i.id}', ${i.p})">
+                            <div style="font-size:30px">${i.icon}</div>
+                            <p>${i.p} monedas</p>
+                         </div>`;
+            });
+            html += '</div><button onclick="game.closeModal()" style="margin-top:20px">Cerrar</button>';
+            this.showModal(html);
+        },
+
+        buy(id, price) {
+            if(this.coins >= price) {
+                this.coins -= price;
+                this.inventory[id] = (this.inventory[id] || 0) + 1;
+                this.updateUI();
+                alert('¡Comprado!');
             } else {
-                // Regeneración durmiendo
-                s.energy = Math.min(100, s.energy + 5);
-                s.hunger = Math.max(0, s.hunger - 0.5); // Da hambre dormir
+                alert('No tienes dinero');
             }
-
-            // Salud impactada por necesidades críticas
-            if(s.hunger < 20 || s.hygiene < 20 || s.energy < 10) s.health = Math.max(0, s.health - 1);
-            else s.health = Math.min(100, s.health + 1);
-
-            // Generar caquita
-            if(s.hygiene < 40 && Math.random() < 0.3) this.spawnPoop();
-
-            this.save();
-            this.render();
         },
 
-        setRoom(room) {
-            this.currentRoom = room;
-            const app = document.getElementById('app');
-            const btns = document.querySelectorAll('.nav-btn');
-            
-            // Background Colors
-            const colors = { 'living': '#E0EAFC', 'kitchen': '#FFF5E1', 'bathroom': '#D4F1F4', 'bedroom': '#F3E5F5' };
-            app.style.background = this.data.isSleeping && room === 'bedroom' ? '#2c3e50' : colors[room];
+        // --- MECANICAS ---
+        toggleSleep() {
+            this.isSleeping = !this.isSleeping;
+            this.changeRoom('cuarto', document.querySelector('button[onclick*="cuarto"]'));
+            this.updateUI();
+        },
 
-            // Toggle Visuals
-            document.getElementById('fridge').style.display = (room === 'kitchen') ? 'block' : 'none';
-            document.getElementById('bath-tools').style.display = (room === 'bathroom') ? 'flex' : 'none';
-            document.getElementById('lamp').style.display = (room === 'bedroom') ? 'flex' : 'none';
-            document.getElementById('poop-container').style.display = (room === 'bathroom') ? 'block' : 'none'; // Poop only visible in bath? No, let's keep it clean, poop needs cleaning in bath context usually, but let's make it appear everywhere or just bathroom? Let's say hygiene implies bathroom needs. Let's show poops in all rooms or just stick to visual overlay. Actually, showing poop in Bathroom makes sense for cleaning.
-            document.getElementById('poop-container').style.display = 'block'; // Poop everywhere!
+        drag(e, type) {
+            const tool = e.target;
+            const move = (ev) => {
+                const x = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                tool.style.position = 'fixed';
+                tool.style.left = (x - 30) + 'px';
+                tool.style.top = (y - 30) + 'px';
 
-            // Update Nav State
-            btns.forEach(b => b.classList.remove('active'));
-            if(room === 'living') btns[0].classList.add('active');
-            if(room === 'kitchen') btns[1].classList.add('active');
-            if(room === 'bathroom') btns[2].classList.add('active');
-            if(room === 'bedroom') btns[3].classList.add('active');
+                // Colisión con Globli
+                const gRect = document.getElementById('globli').getBoundingClientRect();
+                if(x > gRect.left && x < gRect.right && y > gRect.top && y < gRect.bottom) {
+                    if(type === 'soap') { this.hy = Math.min(100, this.hy + 1); }
+                    if(type === 'shower') { this.hy = Math.min(100, this.hy + 2); }
+                    this.updateUI();
+                }
+            };
+            const stop = () => {
+                window.onmousemove = window.ontouchmove = null;
+                this.changeRoom('baño', document.querySelector('button[onclick*="baño"]'));
+            };
+            window.onmousemove = window.ontouchmove = move;
+            window.onmouseup = window.ontouchend = stop;
+        },
+
+        startMiniGame() {
+            const canvas = document.getElementById('game-canvas');
+            canvas.style.display = 'block';
+            canvas.innerHTML = '';
+            let score = 0;
             
-            // Adjust Globli Position slightly
+            const spawn = () => {
+                if(score >= 5) {
+                    canvas.style.display = 'none';
+                    this.coins += 20;
+                    this.updateUI();
+                    alert('¡Ganaste 20 monedas!');
+                    return;
+                }
+                const t = document.createElement('div');
+                t.className = 'target';
+                t.innerText = '⚡';
+                t.style.left = Math.random() * 80 + '%';
+                t.style.top = Math.random() * 80 + '%';
+                t.onclick = () => { t.remove(); score++; spawn(); };
+                canvas.appendChild(t);
+            };
+            spawn();
+        },
+
+        // --- HELPERS ---
+        showModal(html) {
+            const m = document.getElementById('modal');
+            document.getElementById('modal-inner').innerHTML = html;
+            m.style.display = 'flex';
+        },
+        closeModal() { document.getElementById('modal').style.display = 'none'; },
+        getIcon(id) {
+            return id === 'pizza' ? '🍕' : id === 'manzana' ? '🍎' : '🍔';
+        },
+        animateGlobli(trans) {
             const g = document.getElementById('globli');
-            g.style.transform = (room === 'bedroom') ? 'scale(0.9) translateY(20px)' : 'scale(1)';
-
-            this.render();
-        },
-
-        actions: {
-            pet(e) {
-                if(game.data.isSleeping) return;
-                game.data.stats.happiness = Math.min(100, game.data.stats.happiness + 5);
-                game.data.coins += 1;
-                audio.play('pop');
-                
-                // Visual FX
-                const heart = document.createElement('div');
-                heart.innerText = '❤️';
-                heart.className = 'hearts-anim';
-                heart.style.left = e.clientX + 'px';
-                heart.style.top = e.clientY + 'px';
-                document.body.appendChild(heart);
-                setTimeout(() => heart.remove(), 1000);
-                
-                game.render();
-            },
-
-            toggleLight() {
-                game.data.isSleeping = !game.data.isSleeping;
-                const knob = document.getElementById('knob');
-                const overlay = document.getElementById('night-overlay');
-                
-                if(game.data.isSleeping) {
-                    knob.style.transform = 'translateY(20px)';
-                    overlay.style.opacity = 1;
-                    document.getElementById('app').style.background = '#2c3e50';
-                } else {
-                    knob.style.transform = 'translateY(0px)';
-                    overlay.style.opacity = 0;
-                    document.getElementById('app').style.background = '#F3E5F5';
-                }
-                game.render();
-            },
-
-            feed(item) {
-                if(game.data.inventory[item] > 0) {
-                    game.data.inventory[item]--;
-                    
-                    // Stats
-                    const vals = {
-                        'pizza': { h: 30, hp: 5 }, 'burger': { h: 40, hp: 2 },
-                        'apple': { h: 10, hp: 5 }, 'sushi': { h: 20, hp: 15 },
-                        'icecream': { h: 5, hp: 20 }
-                    };
-                    
-                    game.data.stats.hunger = Math.min(100, game.data.stats.hunger + vals[item].h);
-                    game.data.stats.happiness = Math.min(100, game.data.stats.happiness + vals[item].hp);
-                    
-                    // Poop risk
-                    game.data.stats.hygiene -= 5;
-
-                    audio.play('eat');
-                    game.ui.closeModal();
-                    game.render();
-                    
-                    // Animation
-                    const g = document.getElementById('globli');
-                    g.style.transform = "scale(1.1)";
-                    setTimeout(() => game.setRoom('kitchen'), 200); // Reset scale logic via setRoom
-                }
-            },
-            
-            cleanPoop(el) {
-                el.remove();
-                game.data.stats.hygiene = Math.min(100, game.data.stats.hygiene + 5);
-                game.data.coins += 2;
-                audio.play('pop');
-                game.render();
-            }
-        },
-
-        spawnPoop() {
-            const container = document.getElementById('poop-container');
-            if(container.children.length > 5) return;
-            
-            const p = document.createElement('div');
-            p.className = 'poop';
-            p.innerText = '💩';
-            // Posición aleatoria cerca del suelo
-            p.style.left = (Math.random() * 80 + 10) + '%';
-            p.style.top = (Math.random() * 100 + 200) + 'px'; // Offset relative to container
-            p.onclick = function() { game.actions.cleanPoop(this); };
-            container.appendChild(p);
-        },
-
-        render() {
-            const s = this.data.stats;
-            
-            // Bars
-            document.getElementById('bar-hp').style.width = s.health + '%';
-            document.getElementById('bar-hg').style.width = s.hunger + '%';
-            document.getElementById('bar-hy').style.width = s.hygiene + '%';
-            document.getElementById('bar-sl').style.width = s.energy + '%';
-            document.getElementById('bar-ha').style.width = s.happiness + '%';
-            document.getElementById('coin-disp').innerText = this.data.coins;
-
-            // Globli Look
-            const g = document.getElementById('globli');
-            g.className = ''; // Reset
-            
-            if (this.data.isSleeping) g.classList.add('sleeping');
-            else {
-                if (s.happiness < 40 || s.hunger < 30 || s.health < 40) g.classList.add('sad');
-                else if (s.happiness > 80 && s.hunger > 80) g.classList.add('happy');
-            }
-            
-            if (s.hygiene < 50) g.classList.add('dirty-overlay');
-            if (this.data.soapedLevel > 0) g.classList.add('soaped');
-        },
-
-        ui: {
-            openFridge() {
-                const inv = game.data.inventory;
-                let html = `<h2>Nevera</h2><div class="grid-shop">`;
-                
-                const foods = [
-                    {id: 'apple', icon: '🍎', n: 'Manzana'}, {id: 'pizza', icon: '🍕', n: 'Pizza'},
-                    {id: 'burger', icon: '🍔', n: 'Burguer'}, {id: 'sushi', icon: '🍣', n: 'Sushi'},
-                    {id: 'icecream', icon: '🍦', n: 'Helado'}
-                ];
-
-                foods.forEach(f => {
-                    if(inv[f.id] > 0) {
-                        html += `<div class="shop-item" onclick="game.actions.feed('${f.id}')">
-                            <span class="qty-badge">${inv[f.id]}</span>
-                            <div style="font-size:2rem">${f.icon}</div>
-                            <div>${f.n}</div>
-                        </div>`;
-                    }
-                });
-                
-                html += `</div><br><button onclick="game.ui.openShop()" style="width:100%; padding:10px;">🛒 Ir a la Tienda</button>`;
-                html += `<br><br><button onclick="game.ui.closeModal()">Cerrar</button>`;
-                
-                document.getElementById('modal-body').innerHTML = html;
-                document.getElementById('modal-main').style.display = 'flex';
-            },
-
-            openShop() {
-                let html = `<h2>Supermercado</h2><p>Tienes: 💰${game.data.coins}</p><div class="grid-shop">`;
-                const items = [
-                    {id: 'apple', icon: '🍎', n: 'Manzana', p: 5},
-                    {id: 'pizza', icon: '🍕', n: 'Pizza', p: 15},
-                    {id: 'burger', icon: '🍔', n: 'Burguer', p: 20},
-                    {id: 'sushi', icon: '🍣', n: 'Sushi', p: 30},
-                    {id: 'icecream', icon: '🍦', n: 'Helado', p: 10}
-                ];
-
-                items.forEach(i => {
-                    html += `<div class="shop-item" onclick="game.ui.buy('${i.id}', ${i.p})">
-                        <div style="font-size:2rem">${i.icon}</div>
-                        <div>${i.n}</div>
-                        <div style="color:var(--accent); font-weight:bold">${i.p} G</div>
-                    </div>`;
-                });
-                
-                html += `</div><br><button onclick="game.ui.openFridge()">⬅ Volver a Nevera</button>`;
-                document.getElementById('modal-body').innerHTML = html;
-            },
-
-            buy(id, price) {
-                if(game.data.coins >= price) {
-                    game.data.coins -= price;
-                    game.data.inventory[id]++;
-                    audio.play('pop');
-                    game.save();
-                    this.openShop(); // Refresh
-                } else {
-                    audio.play('sad');
-                }
-            },
-
-            closeModal() {
-                document.getElementById('modal-main').style.display = 'none';
-            }
+            g.style.transform = trans;
+            setTimeout(() => g.style.transform = 'scale(1)', 200);
         }
     };
 
-    /* --- INTERACTIVIDAD DE ARRASTRAR (BAÑO) --- */
-    let draggedItem = null;
-    const proxy = document.getElementById('drag-proxy');
-    const globliRect = () => document.getElementById('globli').getBoundingClientRect();
-
-    function dragStart(e, type) {
-        e.preventDefault();
-        draggedItem = type;
-        proxy.style.display = 'block';
-        proxy.innerText = type === 'soap' ? '🧼' : '🚿';
-        moveProxy(e.touches ? e.touches[0] : e);
-    }
-
-    function moveProxy(e) {
-        proxy.style.left = (e.clientX - 30) + 'px';
-        proxy.style.top = (e.clientY - 30) + 'px';
-    }
-
-    // Global Listeners for Drag
-    window.addEventListener('mousemove', e => { if(draggedItem) { moveProxy(e); checkCollision(e); } });
-    window.addEventListener('touchmove', e => { if(draggedItem) { moveProxy(e.touches[0]); checkCollision(e.touches[0]); } }, {passive: false});
-    
-    window.addEventListener('mouseup', () => { draggedItem = null; proxy.style.display = 'none'; });
-    window.addEventListener('touchend', () => { draggedItem = null; proxy.style.display = 'none'; });
-
-    function checkCollision(e) {
-        const gr = globliRect();
-        // Verificar si el cursor está sobre Globli
-        if (e.clientX >= gr.left && e.clientX <= gr.right && e.clientY >= gr.top && e.clientY <= gr.bottom) {
-            
-            if (draggedItem === 'soap') {
-                if(game.data.soapedLevel < 100) {
-                    game.data.soapedLevel += 2;
-                    audio.play('pop'); // Sonido burbujas
-                    if(game.data.soapedLevel > 20) game.render(); // Actualiza visual
-                }
-            }
-            
-            if (draggedItem === 'shower') {
-                audio.play('shower');
-                if(game.data.soapedLevel > 0) {
-                    // Enjuagando
-                    game.data.soapedLevel -= 3;
-                    game.data.stats.hygiene = Math.min(100, game.data.stats.hygiene + 2);
-                    if(game.data.stats.hygiene >= 100) {
-                        game.data.coins += 5;
-                        game.data.stats.happiness += 10;
-                        draggedItem = null; // Stop
-                        proxy.style.display = 'none';
-                        audio.play('happy');
-                    }
-                }
-                game.render();
-            }
-        }
-    }
-
-    // Inicializar
     game.init();
-
 </script>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Globli: El Regreso</title>
+    <style>
+        :root {
+            --primary: #4ECDC4;
+            --accent: #FF6B6B;
+            --dark: #2C3E50;
+            --globli-skin: #00A896;
+        }
+
+        * { box-sizing: border-box; user-select: none; touch-action: manipulation; }
+        
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Arial', sans-serif;
+            background: #222;
+            height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        #app {
+            width: 100%; max-width: 450px; height: 100%; max-height: 850px;
+            background: #e0f7fa;
+            position: relative; display: flex; flex-direction: column;
+            overflow: hidden; border: 4px solid #333;
+        }
+
+        /* --- UI de Estados --- */
+        .stats-panel {
+            background: rgba(255,255,255,0.9);
+            padding: 10px; border-bottom: 2px solid #ccc;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+            z-index: 100;
+        }
+        .stat-item { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: bold; }
+        .bar-bg { flex: 1; height: 12px; background: #eee; border-radius: 6px; overflow: hidden; border: 1px solid #ddd; }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.3s; }
+
+        .currency {
+            position: absolute; top: 70px; right: 10px;
+            background: gold; padding: 5px 15px; border-radius: 20px;
+            font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 90;
+        }
+
+        /* --- Escenario --- */
+        #stage {
+            flex: 1; position: relative;
+            display: flex; justify-content: center; align-items: center;
+            transition: background 0.5s;
+        }
+
+        /* GLOBILI */
+        #globli-container { position: relative; z-index: 10; transition: transform 0.3s; }
+        
+        #globli {
+            width: 160px; height: 160px;
+            background: radial-gradient(circle at 30% 30%, #40E0D0, var(--globli-skin));
+            border-radius: 50% 50% 45% 45%;
+            position: relative;
+            box-shadow: inset -5px -5px 15px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .eyes { position: absolute; top: 40px; width: 100%; display: flex; justify-content: center; gap: 20px; }
+        .eye { width: 35px; height: 40px; background: white; border-radius: 50%; position: relative; }
+        .pupil { width: 15px; height: 15px; background: #222; border-radius: 50%; position: absolute; top: 15px; left: 10px; }
+        .mouth { 
+            width: 30px; height: 15px; border-bottom: 4px solid #222; 
+            border-radius: 0 0 15px 15px; position: absolute; bottom: 40px; left: 65px; 
+        }
+
+        /* Modificadores Visuales */
+        .dirty { filter: sepia(0.5) saturate(1.5); }
+        .dirty::after {
+            content: '💩'; position: absolute; top: -20px; right: -20px; font-size: 30px;
+        }
+        .sad .mouth { border-bottom: none; border-top: 4px solid #222; border-radius: 15px 15px 0 0; transform: translateY(5px); }
+        .sleeping .eye { height: 4px; background: #333; margin-top: 20px; }
+        .sleeping .pupil { display: none; }
+
+        /* --- Herramientas e Interactivos --- */
+        .room-controls {
+            position: absolute; bottom: 20px; width: 100%;
+            display: flex; justify-content: center; gap: 20px; z-index: 50;
+        }
+        .tool {
+            width: 60px; height: 60px; background: white; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 30px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            touch-action: none;
+        }
+
+        /* --- Navegación --- */
+        .nav {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            background: white; border-top: 2px solid #ddd;
+        }
+        .nav-btn {
+            padding: 15px 5px; border: none; background: none;
+            cursor: pointer; display: flex; flex-direction: column; align-items: center;
+            font-size: 20px; opacity: 0.6;
+        }
+        .nav-btn.active { opacity: 1; color: var(--primary); background: #f9f9f9; }
+        .nav-btn span { font-size: 10px; text-transform: uppercase; font-weight: bold; margin-top: 4px; }
+
+        /* --- Modales --- */
+        .modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 1000; display: none;
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; width: 85%; border-radius: 20px; padding: 20px;
+            text-align: center; max-height: 70%; overflow-y: auto;
+        }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .card { border: 2px solid #eee; padding: 10px; border-radius: 10px; cursor: pointer; }
+
+        /* --- Minijuego --- */
+        #game-canvas {
+            position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+            pointer-events: none; display: none;
+        }
+        .target { 
+            position: absolute; width: 50px; height: 50px; background: var(--accent);
+            border-radius: 50%; pointer-events: auto; cursor: pointer;
+            display: flex; justify-content: center; align-items: center; color: white;
+        }
+
+        /* --- Animaciones --- */
+        @keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
+        .floating { animation: float 2s infinite ease-in-out; }
+        
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="stats-panel">
+        <div class="stat-item">❤️ <div class="bar-bg"><div id="bar-hp" class="bar-fill" style="background:#ff4757"></div></div></div>
+        <div class="stat-item">🍕 <div class="bar-bg"><div id="bar-hg" class="bar-fill" style="background:#ffa502"></div></div></div>
+        <div class="stat-item">🧼 <div class="bar-bg"><div id="bar-hy" class="bar-fill" style="background:#2e97ff"></div></div></div>
+        <div class="stat-item">⚡ <div class="bar-bg"><div id="bar-en" class="bar-fill" style="background:#2ed573"></div></div></div>
+    </div>
+
+    <div class="currency">💰 <span id="coins">100</span></div>
+
+    <div id="stage">
+        <div id="game-canvas"></div>
+        
+        <div id="globli-container" class="floating">
+            <div id="globli">
+                <div class="eyes">
+                    <div class="eye"><div class="pupil"></div></div>
+                    <div class="eye"><div class="pupil"></div></div>
+                </div>
+                <div class="mouth"></div>
+            </div>
+        </div>
+
+        <div id="room-extras" class="room-controls"></div>
+    </div>
+
+    <div class="nav">
+        <button class="nav-btn active" onclick="game.changeRoom('sala', this)">🏠<span>Sala</span></button>
+        <button class="nav-btn" onclick="game.changeRoom('cocina', this)">🍳<span>Cocina</span></button>
+        <button class="nav-btn" onclick="game.changeRoom('baño', this)">🛁<span>Baño</span></button>
+        <button class="nav-btn" onclick="game.changeRoom('cuarto', this)">🌙<span>Cuarto</span></button>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content" id="modal-inner"></div>
+    </div>
+</div>
+
+<script>
+    const game = {
+        // Datos del estado
+        hp: 100, hg: 80, hy: 100, en: 100, coins: 100,
+        room: 'sala',
+        isSleeping: false,
+        inventory: { pizza: 1, manzana: 2, burger: 0 },
+        
+        init() {
+            this.updateUI();
+            this.startLoop();
+            this.changeRoom('sala', document.querySelector('.nav-btn'));
+            
+            // Hacer interactivo a Globli (Acariciar)
+            document.getElementById('globli').onclick = () => {
+                if(this.isSleeping) return;
+                this.hp = Math.min(100, this.hp + 2);
+                this.updateUI();
+                this.animateGlobli('scale(1.1)');
+            };
+        },
+
+        startLoop() {
+            setInterval(() => {
+                if(this.isSleeping) {
+                    this.en = Math.min(100, this.en + 5);
+                    this.hg -= 0.5;
+                } else {
+                    this.hg -= 1;
+                    this.hy -= 0.5;
+                    this.en -= 0.5;
+                }
+                
+                if(this.hg < 20 || this.hy < 20 || this.en < 20) this.hp -= 1;
+                
+                this.updateUI();
+            }, 3000);
+        },
+
+        updateUI() {
+            document.getElementById('bar-hp').style.width = this.hp + '%';
+            document.getElementById('bar-hg').style.width = this.hg + '%';
+            document.getElementById('bar-hy').style.width = this.hy + '%';
+            document.getElementById('bar-en').style.width = this.en + '%';
+            document.getElementById('coins').innerText = this.coins;
+
+            const g = document.getElementById('globli');
+            g.className = '';
+            if(this.hy < 40) g.classList.add('dirty');
+            if(this.hg < 40 || this.hp < 40) g.parentElement.classList.add('sad'); else g.parentElement.classList.remove('sad');
+            if(this.isSleeping) g.parentElement.classList.add('sleeping'); else g.parentElement.classList.remove('sleeping');
+        },
+
+        changeRoom(roomName, btn) {
+            this.room = roomName;
+            
+            // Actualizar botones nav
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const stage = document.getElementById('stage');
+            const extras = document.getElementById('room-extras');
+            extras.innerHTML = '';
+            document.getElementById('game-canvas').style.display = 'none';
+
+            if(roomName === 'sala') {
+                stage.style.background = "#e0f7fa";
+                extras.innerHTML = '<button class="tool" onclick="game.startMiniGame()">🎮</button>';
+                extras.innerHTML += '<button class="tool" onclick="game.openShop()">🛒</button>';
+            } 
+            else if(roomName === 'cocina') {
+                stage.style.background = "#fff9c4";
+                extras.innerHTML = '<button class="tool" onclick="game.openFridge()">❄️</button>';
+            } 
+            else if(roomName === 'baño') {
+                stage.style.background = "#e3f2fd";
+                extras.innerHTML = '<div class="tool" id="soap" onmousedown="game.drag(event, \'soap\')" ontouchstart="game.drag(event, \'soap\')">🧼</div>';
+                extras.innerHTML += '<div class="tool" id="shower" onmousedown="game.drag(event, \'shower\')" ontouchstart="game.drag(event, \'shower\')">🚿</div>';
+            } 
+            else if(roomName === 'cuarto') {
+                stage.style.background = this.isSleeping ? "#1a237e" : "#f3e5f5";
+                extras.innerHTML = `<button class="tool" onclick="game.toggleSleep()">${this.isSleeping ? '💡' : '💤'}</button>`;
+            }
+        },
+
+        // --- FUNCIONES DE COMIDA ---
+        openFridge() {
+            let html = '<h2>Mi Nevera</h2><div class="grid">';
+            for(let item in this.inventory) {
+                if(this.inventory[item] > 0) {
+                    html += `<div class="card" onclick="game.eat('${item}')">
+                                <div style="font-size:30px">${this.getIcon(item)}</div>
+                                <p>${item} (${this.inventory[item]})</p>
+                             </div>`;
+                }
+            }
+            html += '</div><button onclick="game.closeModal()" style="margin-top:20px">Cerrar</button>';
+            this.showModal(html);
+        },
+
+        eat(item) {
+            if(this.inventory[item] > 0) {
+                this.inventory[item]--;
+                this.hg = Math.min(100, this.hg + 20);
+                this.hp = Math.min(100, this.hp + 5);
+                this.animateGlobli('translateY(-20px) scale(1.1)');
+                this.closeModal();
+                this.updateUI();
+            }
+        },
+
+        openShop() {
+            const items = [
+                {id: 'pizza', p: 20, icon: '🍕'},
+                {id: 'manzana', p: 5, icon: '🍎'},
+                {id: 'burger', p: 15, icon: '🍔'}
+            ];
+            let html = '<h2>Tienda de Comida</h2><div class="grid">';
+            items.forEach(i => {
+                html += `<div class="card" onclick="game.buy('${i.id}', ${i.p})">
+                            <div style="font-size:30px">${i.icon}</div>
+                            <p>${i.p} monedas</p>
+                         </div>`;
+            });
+            html += '</div><button onclick="game.closeModal()" style="margin-top:20px">Cerrar</button>';
+            this.showModal(html);
+        },
+
+        buy(id, price) {
+            if(this.coins >= price) {
+                this.coins -= price;
+                this.inventory[id] = (this.inventory[id] || 0) + 1;
+                this.updateUI();
+                alert('¡Comprado!');
+            } else {
+                alert('No tienes dinero');
+            }
+        },
+
+        // --- MECANICAS ---
+        toggleSleep() {
+            this.isSleeping = !this.isSleeping;
+            this.changeRoom('cuarto', document.querySelector('button[onclick*="cuarto"]'));
+            this.updateUI();
+        },
+
+        drag(e, type) {
+            const tool = e.target;
+            const move = (ev) => {
+                const x = ev.touches ? ev.touches[0].clientX : ev.clientX;
+                const y = ev.touches ? ev.touches[0].clientY : ev.clientY;
+                tool.style.position = 'fixed';
+                tool.style.left = (x - 30) + 'px';
+                tool.style.top = (y - 30) + 'px';
+
+                // Colisión con Globli
+                const gRect = document.getElementById('globli').getBoundingClientRect();
+                if(x > gRect.left && x < gRect.right && y > gRect.top && y < gRect.bottom) {
+                    if(type === 'soap') { this.hy = Math.min(100, this.hy + 1); }
+                    if(type === 'shower') { this.hy = Math.min(100, this.hy + 2); }
+                    this.updateUI();
+                }
+            };
+            const stop = () => {
+                window.onmousemove = window.ontouchmove = null;
+                this.changeRoom('baño', document.querySelector('button[onclick*="baño"]'));
+            };
+            window.onmousemove = window.ontouchmove = move;
+            window.onmouseup = window.ontouchend = stop;
+        },
+
+        startMiniGame() {
+            const canvas = document.getElementById('game-canvas');
+            canvas.style.display = 'block';
+            canvas.innerHTML = '';
+            let score = 0;
+            
+            const spawn = () => {
+                if(score >= 5) {
+                    canvas.style.display = 'none';
+                    this.coins += 20;
+                    this.updateUI();
+                    alert('¡Ganaste 20 monedas!');
+                    return;
+                }
+                const t = document.createElement('div');
+                t.className = 'target';
+                t.innerText = '⚡';
+                t.style.left = Math.random() * 80 + '%';
+                t.style.top = Math.random() * 80 + '%';
+                t.onclick = () => { t.remove(); score++; spawn(); };
+                canvas.appendChild(t);
+            };
+            spawn();
+        },
+
+        // --- HELPERS ---
+        showModal(html) {
+            const m = document.getElementById('modal');
+            document.getElementById('modal-inner').innerHTML = html;
+            m.style.display = 'flex';
+        },
+        closeModal() { document.getElementById('modal').style.display = 'none'; },
+        getIcon(id) {
+            return id === 'pizza' ? '🍕' : id === 'manzana' ? '🍎' : '🍔';
+        },
+        animateGlobli(trans) {
+            const g = document.getElementById('globli');
+            g.style.transform = trans;
+            setTimeout(() => g.style.transform = 'scale(1)', 200);
+        }
+    };
+
+    game.init();
+</script>
+
 </body>
 </html>
