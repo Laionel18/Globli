@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Globli - Mascota Virtual</title>
+    <style>
+        :root {
+            --primary: #4ECDC4;
+            --secondary: #FF6B6B;
+            --accent: #FFE66D;
+            --dark: #2C3E50;
+            --light: #F7F9FC;
+            --globli-color: #00A896;
+            --globli-shadow: #028090;
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #E0EAFC;
+            background-image: linear-gradient(120deg, #E0EAFC 0%, #CFDEF3 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: var(--dark);
+        }
+
+        #app {
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            max-height: 900px;
+            background: rgba(255, 255, 255, 0.9);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* --- Header & Stats --- */
+        .header {
+            padding: 15px;
+            background: white;
+            border-bottom: 2px solid #eee;
+            z-index: 10;
+        }
+
+        .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .app-title { font-weight: 800; font-size: 1.2rem; color: var(--dark); letter-spacing: 1px; }
+        .coins-display { background: var(--accent); padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        .stats-container { display: flex; justify-content: space-around; gap: 10px; }
+        .stat-box { flex: 1; text-align: center; }
+        .stat-icon { font-size: 1.2rem; margin-bottom: 2px; display: block; }
+        .progress-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; position: relative; }
+        .progress-fill { height: 100%; width: 100%; transition: width 0.5s ease, background 0.5s ease; }
+        .stat-val { font-size: 0.7rem; color: #777; margin-top: 2px; display: block; }
+
+        /* --- Main Stage (Globli) --- */
+        .stage {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: url('data:image/svg+xml;utf8,<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1" fill="%23ddd"/></svg>') repeat;
+        }
+
+        #globli-container {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+
+        .globli-body {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 30%, #40E0D0, var(--globli-color));
+            border-radius: 50% 50% 45% 45%;
+            position: relative;
+            box-shadow: inset -10px -10px 20px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.2);
+            animation: breathe 3s infinite ease-in-out;
+            transition: all 0.5s ease;
+        }
+
+        /* Estados Visuales */
+        .globli-body.sick { filter: grayscale(0.8) sepia(0.2); animation: shake 2s infinite; }
+        .globli-body.dirty::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(#8B4513 20%, transparent 20%), radial-gradient(#8B4513 20%, transparent 20%);
+            background-size: 40px 40px; background-position: 10px 10px, 30px 30px; opacity: 0.6; pointer-events: none; border-radius: 50%;
+        }
+
+        .eyes { position: absolute; top: 35%; width: 100%; display: flex; justify-content: center; gap: 20px; }
+        .eye { width: 40px; height: 45px; background: white; border-radius: 50%; position: relative; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .pupil { width: 18px; height: 20px; background: #222; border-radius: 50%; position: absolute; top: 12px; left: 11px; transition: all 0.3s; }
+        .pupil::after { content: ''; width: 6px; height: 6px; background: white; border-radius: 50%; position: absolute; top: 3px; left: 3px; }
+
+        .mouth {
+            width: 30px; height: 15px; border-bottom: 4px solid #222; border-radius: 0 0 20px 20px;
+            position: absolute; bottom: 25%; left: 50%; transform: translateX(-50%); transition: all 0.3s;
+        }
+
+        /* Variaciones de cara */
+        .globli-body.sad .mouth { border-bottom: none; border-top: 4px solid #222; border-radius: 20px 20px 0 0; bottom: 22%; }
+        .globli-body.sleeping .eye { height: 5px; margin-top: 20px; background: transparent; border-bottom: 4px solid #333; box-shadow: none; border-radius: 0; }
+        .globli-body.sleeping .pupil { display: none; }
+        .zzz { position: absolute; right: -20px; top: -20px; font-weight: bold; color: var(--dark); font-size: 1.5rem; animation: floatZ 2s infinite; opacity: 0; }
+
+        /* Accesorios */
+        .accessory-hat {
+            position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
+            width: 80px; height: 40px; background: #FF6B6B; border-radius: 40px 40px 0 0;
+            border-bottom: 8px solid #c0392b; display: none; z-index: 5;
+        }
+        .accessory-hat::before { content: ''; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; background: #FFE66D; border-radius: 50%; }
+        
+        .accessory-glasses {
+            position: absolute; top: 38%; left: 50%; transform: translateX(-50%);
+            width: 110px; height: 30px; display: none; z-index: 6;
+        }
+        .accessory-glasses::before, .accessory-glasses::after {
+            content: ''; width: 40px; height: 40px; border: 4px solid #333; background: rgba(0,0,0,0.2); border-radius: 5px; position: absolute; top: 0;
+        }
+        .accessory-glasses::before { left: 0; } .accessory-glasses::after { right: 0; }
+        .accessory-glasses span { width: 20px; height: 4px; background: #333; position: absolute; top: 18px; left: 50%; transform: translateX(-50%); }
+
+        /* --- Panel Info --- */
+        .info-panel {
+            background: rgba(255,255,255,0.8); padding: 8px; text-align: center;
+            font-size: 0.9rem; color: #555; border-top: 1px solid #ddd;
+            min-height: 36px; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* --- Menú Acciones --- */
+        .controls {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px;
+            background: white; border-top: 2px solid #eee;
+        }
+
+        .btn {
+            background: var(--light); border: none; padding: 12px 5px; border-radius: 12px;
+            cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: transform 0.1s, background 0.2s; color: var(--dark); box-shadow: 0 2px 0 #ccc;
+        }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
+        .btn i { font-size: 1.4rem; margin-bottom: 4px; font-style: normal; }
+        .btn span { font-size: 0.7rem; font-weight: bold; text-transform: uppercase; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+
+        /* --- Modales / Overlays --- */
+        .modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+            z-index: 100; display: none; align-items: center; justify-content: center;
+        }
+        .modal {
+            background: white; width: 90%; max-height: 80%; border-radius: 20px;
+            padding: 20px; overflow-y: auto; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal h2 { margin-top: 0; color: var(--primary); }
+        .close-btn {
+            position: absolute; top: 15px; right: 15px; background: #eee; border: none;
+            width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-weight: bold;
+        }
+
+        /* Listas (Tienda/Inv) */
+        .item-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .item-card {
+            border: 2px solid #eee; border-radius: 10px; padding: 10px; cursor: pointer;
+            transition: all 0.2s; position: relative;
+        }
+        .item-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .item-card h4 { margin: 5px 0; font-size: 0.9rem; }
+        .item-card p { margin: 0; font-size: 0.8rem; color: #777; }
+        .price-tag { background: var(--accent); padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; display: inline-block; margin-top: 5px; }
+
+        /* Critical Overlay */
+        #critical-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(50,0,0,0.8);
+            z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center;
+        }
+
+        /* Animations */
+        @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+        @keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }
+        @keyframes floatZ { 0% { opacity: 0; transform: translateY(0) translateX(0); } 50% { opacity: 1; } 100% { opacity: 0; transform: translateY(-20px) translateX(10px); } }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        @keyframes bubbles { 0% { bottom: 0; opacity: 0; } 50% { opacity: 1; } 100% { bottom: 100px; opacity: 0; } }
+
+        /* Minigame Styles */
+        .game-area { width: 100%; height: 200px; background: #f0f0f0; border-radius: 10px; position: relative; overflow: hidden; margin-bottom: 10px; border: 2px dashed #ccc; }
+        .game-btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 5px; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+        
+        /* Game 1 Elements */
+        .spark { width: 30px; height: 30px; background: var(--accent); border-radius: 50%; position: absolute; cursor: pointer; border: 2px solid orange; box-shadow: 0 0 10px yellow; }
+        /* Game 2 Elements */
+        .color-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; height: 100%; padding: 20px; }
+        .color-box { border-radius: 8px; cursor: pointer; opacity: 0.6; transition: 0.1s; }
+        .color-box.active { opacity: 1; transform: scale(1.05); border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        /* Game 3 Elements */
+        .jump-target { width: 50px; height: 50px; background: var(--secondary); border-radius: 8px; position: absolute; display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; cursor: pointer; }
+
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <div id="start-screen" style="position:absolute;top:0;left:0;width:100%;height:100%;background:var(--primary);z-index:300;display:flex;flex-direction:column;justify-content:center;align-items:center;color:white;text-align:center;padding:20px;">
+            <h1 style="font-size:3rem;margin-bottom:10px;">GLOBLI</h1>
+            <p>Tu mascota virtual esférica</p>
+            <button id="start-btn" class="btn" style="background:white; color:var(--primary); padding: 15px 40px; font-size:1.2rem; margin-top:30px;">EMPEZAR</button>
+        </div>
+
+        <div class="header">
+            <div class="top-row">
+                <div class="app-title">GLOBLI</div>
+                <div class="coins-display">💰 <span id="coin-val">0</span></div>
+            </div>
+            <div class="stats-container">
+                <div class="stat-box">
+                    <span class="stat-icon">❤️</span>
+                    <div class="progress-bar"><div class="progress-fill" id="bar-health"></div></div>
+                    <span class="stat-val" id="val-health">100%</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-icon">🍔</span>
+                    <div class="progress-bar"><div class="progress-fill" id="bar-hunger"></div></div>
+                    <span class="stat-val" id="val-hunger">0%</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-icon">⭐</span>
+                    <div class="progress-bar"><div class="progress-fill" id="bar-happiness"></div></div>
+                    <span class="stat-val" id="val-happiness">100%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stage">
+            <div id="globli-container">
+                <div class="zzz" id="zzz-anim">Zzz...</div>
+                <div class="globli-body" id="globli">
+                    <div class="accessory-hat" id="acc-hat"></div>
+                    <div class="accessory-glasses" id="acc-glasses"><span></span></div>
+                    <div class="eyes">
+                        <div class="eye"><div class="pupil"></div></div>
+                        <div class="eye"><div class="pupil"></div></div>
+                    </div>
+                    <div class="mouth"></div>
+                </div>
+            </div>
+            <div id="bath-fx" style="position:absolute; width:100%; height:100%; pointer-events:none; display:none;"></div>
+        </div>
+
+        <div class="info-panel" id="info-msg">¡Bienvenido a casa de Globli!</div>
+
+        <div class="controls">
+            <button class="btn" onclick="game.ui.openFoodMenu()"><i>🍎</i><span>Comer</span></button>
+            <button class="btn" onclick="game.ui.openGamesMenu()"><i>🎮</i><span>Jugar</span></button>
+            <button class="btn" onclick="game.actions.bathe()"><i>🛁</i><span>Bañar</span></button>
+            <button class="btn" id="btn-sleep" onclick="game.actions.toggleSleep()"><i>💤</i><span>Dormir</span></button>
+            <button class="btn" onclick="game.actions.heal()"><i>💊</i><span>Curar</span></button>
+            <button class="btn" onclick="game.ui.openShop()"><i>🛒</i><span>Tienda</span></button>
+            <button class="btn" onclick="game.ui.openInventory()" style="grid-column: 2;"><i>🎒</i><span>Inv</span></button>
+        </div>
+
+        <div class="modal-overlay" id="modal-overlay">
+            <div class="modal" id="modal-content">
+                </div>
+        </div>
+
+        <div id="critical-overlay">
+            <h1 style="font-size: 3rem;">🚑</h1>
+            <h2>¡EMERGENCIA!</h2>
+            <p>Globli está muy grave.<br>Necesita un botiquín urgente.</p>
+            <button class="btn" onclick="game.actions.heal()" style="margin-top:20px; background:white; color:darkred;">USAR BOTIQUÍN</button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * AUDIO ENGINE (Web Audio API)
+         * Generates sounds without external files to comply with single-file requirement.
+         */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = false;
+            }
+
+            init() {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+                this.enabled = true;
+                this.playBootSound();
+                this.startBGMLoop();
+            }
+
+            playTone(freq, type, duration, vol = 0.1) {
+                if (!this.enabled) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + duration);
+            }
+
+            playBootSound() {
+                this.playTone(440, 'sine', 0.5);
+                setTimeout(() => this.playTone(880, 'sine', 0.5), 100);
+            }
+
+            playEat() {
+                this.playTone(300, 'triangle', 0.1);
+                setTimeout(() => this.playTone(400, 'triangle', 0.1), 100);
+            }
+            
+            playHappy() {
+                this.playTone(523.25, 'sine', 0.2); // C5
+                setTimeout(() => this.playTone(659.25, 'sine', 0.2), 150); // E5
+                setTimeout(() => this.playTone(783.99, 'sine', 0.4), 300); // G5
+            }
+
+            playSad() {
+                this.playTone(300, 'sawtooth', 0.3);
+                setTimeout(() => this.playTone(200, 'sawtooth', 0.4), 200);
+            }
+
+            playCoin() {
+                this.playTone(900, 'square', 0.1, 0.05);
+                setTimeout(() => this.playTone(1200, 'square', 0.2, 0.05), 50);
+            }
+
+            startBGMLoop() {
+                // Simple ambient generative loop using intervals
+                setInterval(() => {
+                    if(document.visibilityState === 'visible' && !game.state.isSleeping && game.state.stats.health > 0) {
+                         const notes = [261, 329, 392, 523];
+                         if(Math.random() > 0.7) {
+                             this.playTone(notes[Math.floor(Math.random()*notes.length)], 'sine', 0.8, 0.02);
+                         }
+                    }
+                }, 2000);
+            }
+        }
+
+        const audio = new SoundEngine();
+
+        /**
+         * GAME LOGIC
+         */
+        const game = {
+            config: {
+                saveKey: 'globliSaveData',
+                tickRate: 1000, // 1 second
+                decayRate: 60, // Decay every 60 ticks
+            },
+            state: {
+                stats: { health: 100, hunger: 0, happiness: 100, energy: 100, hygiene: 100 },
+                inventory: {
+                    food: { fruit: 2, shake: 2, cookie: 2 },
+                    medkit: 0,
+                    accessories: { hat: false, glasses: false }
+                },
+                wearing: { hat: false, glasses: false },
+                coins: 50,
+                isSleeping: false,
+                lastTick: Date.now()
+            },
+            tickCount: 0,
+
+            init() {
+                this.load();
+                this.ui.renderAll();
+                this.loop = setInterval(() => this.tick(), this.config.tickRate);
+                this.eventLoop = setInterval(() => this.randomEvent(), 180000); // 3 mins avg
+            },
+
+            load() {
+                const saved = localStorage.getItem(this.config.saveKey);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        this.state = { ...this.state, ...parsed };
+                    } catch (e) { localStorage.removeItem(this.config.saveKey); }
+                }
+            },
+
+            save() {
+                localStorage.setItem(this.config.saveKey, JSON.stringify(this.state));
+            },
+
+            tick() {
+                this.tickCount++;
+                const s = this.state;
+                
+                // Sleep Logic (Regen Energy)
+                if (s.isSleeping) {
+                    if (s.stats.energy < 100) s.stats.energy += 10;
+                    if (s.stats.energy >= 100) s.stats.energy = 100;
+                    // Sleep ends automatically after 10s is handled by timeout, 
+                    // but visual update happens here
+                    this.ui.updateStats();
+                    return; 
+                }
+
+                // Decay Logic (Every 60s)
+                if (this.tickCount % this.config.decayRate === 0) {
+                    s.stats.hunger = Math.min(100, s.stats.hunger + 5);
+                    s.stats.happiness = Math.max(0, s.stats.happiness - 3);
+                    s.stats.hygiene = Math.max(0, s.stats.hygiene - 4);
+
+                    // Health Penalties
+                    if (s.stats.energy < 30) s.stats.health -= 2;
+                    if (s.stats.hunger > 80) s.stats.health -= 1;
+                    if (s.stats.hygiene < 20) s.stats.health -= 1;
+                    
+                    s.stats.health = Math.max(0, s.stats.health);
+                    
+                    if (s.stats.health <= 0) this.handleCritical();
+                    
+                    this.save();
+                    this.ui.renderAll();
+                }
+            },
+
+            handleCritical() {
+                document.getElementById('critical-overlay').style.display = 'flex';
+                audio.playSad();
+            },
+
+            actions: {
+                passTime(seconds = 15) {
+                    game.tickCount += seconds; // Simulation time
+                    game.ui.msg("⏳ Pasando el tiempo...");
+                },
+
+                feed(type) {
+                    const inv = game.state.inventory.food;
+                    const stats = game.state.stats;
+
+                    if (inv[type] > 0) {
+                        inv[type]--;
+                        
+                        // Effects
+                        if(type === 'fruit') { stats.hunger -= 20; stats.health += 5; }
+                        if(type === 'shake') { stats.hunger -= 15; stats.happiness += 10; }
+                        if(type === 'cookie') { stats.hunger -= 10; stats.energy += 15; }
+
+                        // Constraints
+                        stats.hunger = Math.max(0, stats.hunger);
+                        stats.health = Math.min(100, stats.health);
+                        stats.happiness = Math.min(100, stats.happiness);
+                        stats.energy = Math.min(100, stats.energy);
+                        stats.hygiene = Math.max(0, stats.hygiene - 5);
+
+                        game.state.coins += 5;
+                        game.actions.passTime();
+                        game.save();
+                        game.ui.renderAll();
+                        game.ui.closeModal();
+                        game.ui.msg("¡Ñam ñam! Delicioso.");
+                        audio.playEat();
+                        
+                        // Animation
+                        document.getElementById('globli').style.transform = "scale(1.1)";
+                        setTimeout(()=> document.getElementById('globli').style.transform = "scale(1)", 200);
+                    } else {
+                        game.ui.msg("¡No tienes de eso!");
+                    }
+                },
+
+                bathe() {
+                    game.state.stats.hygiene = 100;
+                    game.state.coins += 5;
+                    game.actions.passTime();
+                    game.ui.msg("¡Globli está reluciente!");
+                    game.save();
+                    game.ui.renderAll();
+                    
+                    // FX
+                    const fx = document.getElementById('bath-fx');
+                    fx.style.display = 'block';
+                    fx.innerHTML = '';
+                    for(let i=0; i<10; i++){
+                        const b = document.createElement('div');
+                        b.style.cssText = `position:absolute; bottom:0; left:${Math.random()*100}%; width:20px; height:20px; background:rgba(255,255,255,0.6); border-radius:50%; animation: bubbles 2s linear forwards; animation-delay: ${Math.random()}s`;
+                        fx.appendChild(b);
+                    }
+                    audio.playTone(600, 'sine', 0.5);
+                    setTimeout(() => fx.style.display = 'none', 2000);
+                },
+
+                heal() {
+                    if (game.state.inventory.medkit > 0) {
+                        game.state.inventory.medkit--;
+                        game.state.stats.health = 100;
+                        game.save();
+                        game.ui.renderAll();
+                        document.getElementById('critical-overlay').style.display = 'none';
+                        game.ui.msg("Globli se siente mucho mejor.");
+                        audio.playHappy();
+                    } else {
+                        game.ui.msg("¡No tienes botiquines! Compra en la tienda.");
+                        audio.playSad();
+                    }
+                },
+
+                toggleSleep() {
+                    const s = game.state;
+                    if(s.isSleeping) {
+                        // Wake up manually (rare case as it auto wakes)
+                        s.isSleeping = false;
+                        game.ui.renderAll();
+                    } else {
+                        s.isSleeping = true;
+                        game.ui.renderAll();
+                        setTimeout(() => {
+                            game.state.isSleeping = false;
+                            game.ui.msg("Globli despertó con energía.");
+                            game.save();
+                            game.ui.renderAll();
+                            audio.playBootSound();
+                        }, 10000);
+                    }
+                },
+                
+                toggleWear(item) {
+                    game.state.wearing[item] = !game.state.wearing[item];
+                    game.save();
+                    game.ui.renderAll();
+                }
+            },
+
+            minigames: {
+                start(id) {
+                    const container = document.getElementById('game-container');
+                    container.innerHTML = '';
+                    game.ui.msg("¡Jugando!");
+
+                    if(id === 1) this.gameCatch(container);
+                    if(id === 2) this.gameColors(container);
+                    if(id === 3) this.gameJump(container);
+                },
+
+                end(won) {
+                    if(won) {
+                        game.state.happiness = Math.min(100, game.state.happiness + 15);
+                        game.state.coins += 20;
+                        game.ui.msg("¡Ganaste! +20 Monedas + Felicidad");
+                        audio.playHappy();
+                        audio.playCoin();
+                    } else {
+                        game.ui.msg("Juego terminado.");
+                    }
+                    game.save();
+                    game.ui.renderAll();
+                    setTimeout(() => game.ui.closeModal(), 1500);
+                },
+
+                gameCatch(container) {
+                    let score = 0;
+                    const target = 10;
+                    const timeLeft = 5000;
+                    
+                    const info = document.createElement('div');
+                    info.innerHTML = `Atrapa 10 chispas! <span id="g1-score">0</span>/${target}`;
+                    container.appendChild(info);
+
+                    const area = document.createElement('div');
+                    area.className = 'game-area';
+                    container.appendChild(area);
+
+                    const spark = document.createElement('div');
+                    spark.className = 'spark';
+                    
+                    const moveSpark = () => {
+                        spark.style.top = Math.random() * 170 + 'px';
+                        spark.style.left = Math.random() * (area.offsetWidth - 30) + 'px';
+                    };
+
+                    spark.onclick = () => {
+                        score++;
+                        document.getElementById('g1-score').innerText = score;
+                        audio.playTone(800 + (score*50), 'sine', 0.1);
+                        if(score >= target) {
+                            clearInterval(timer);
+                            this.end(true);
+                        } else {
+                            moveSpark();
+                        }
+                    };
+                    
+                    area.appendChild(spark);
+                    moveSpark();
+
+                    const timer = setTimeout(() => {
+                        if(score < target) this.end(false);
+                    }, timeLeft);
+                },
+
+                gameColors(container) {
+                    const colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#2C3E50'];
+                    let sequence = [];
+                    let playerSeq = [];
+                    
+                    // Generate sequence
+                    for(let i=0; i<4; i++) sequence.push(Math.floor(Math.random()*4));
+
+                    const grid = document.createElement('div');
+                    grid.className = 'game-area';
+                    grid.style.display = 'grid';
+                    grid.style.gridTemplateColumns = '1fr 1fr';
+                    grid.style.gap = '5px';
+                    grid.style.padding = '10px';
+
+                    colors.forEach((c, idx) => {
+                        const box = document.createElement('div');
+                        box.style.background = c;
+                        box.style.borderRadius = '5px';
+                        box.id = 'cbox-'+idx;
+                        box.onclick = () => {
+                            playerSeq.push(idx);
+                            audio.playTone(300 + (idx*100), 'triangle', 0.2);
+                            if(playerSeq[playerSeq.length-1] !== sequence[playerSeq.length-1]) {
+                                this.end(false);
+                            } else if (playerSeq.length === sequence.length) {
+                                this.end(true);
+                            }
+                        };
+                        grid.appendChild(box);
+                    });
+                    
+                    container.appendChild(grid);
+                    const info = document.createElement('div');
+                    info.innerText = "Memoriza la secuencia...";
+                    container.prepend(info);
+
+                    // Show sequence
+                    let step = 0;
+                    const interval = setInterval(() => {
+                        if(step >= sequence.length) {
+                            clearInterval(interval);
+                            info.innerText = "¡Repite la secuencia!";
+                            return;
+                        }
+                        const id = sequence[step];
+                        const el = document.getElementById('cbox-'+id);
+                        el.style.opacity = '1';
+                        el.style.transform = 'scale(0.9)';
+                        audio.playTone(300 + (id*100), 'triangle', 0.2);
+                        setTimeout(() => {
+                            el.style.opacity = '0.6';
+                            el.style.transform = 'scale(1)';
+                        }, 400);
+                        step++;
+                    }, 800);
+                },
+
+                gameJump(container) {
+                    let clicks = 0;
+                    const target = 7;
+                    
+                    const area = document.createElement('div');
+                    area.className = 'game-area';
+                    container.appendChild(area);
+                    
+                    const btn = document.createElement('div');
+                    btn.className = 'jump-target';
+                    btn.innerText = "TAP!";
+                    
+                    const move = () => {
+                        btn.style.top = Math.random() * 150 + 'px';
+                        btn.style.left = Math.random() * (area.offsetWidth - 50) + 'px';
+                    };
+                    
+                    btn.onclick = () => {
+                        clicks++;
+                        audio.playTone(200, 'square', 0.05);
+                        move();
+                        if(clicks >= target) {
+                            clearTimeout(timer);
+                            this.end(true);
+                        }
+                    };
+                    
+                    area.appendChild(btn);
+                    move();
+                    
+                    const timer = setTimeout(() => {
+                        if(clicks < target) this.end(false);
+                    }, 4000);
+                }
+            },
+
+            randomEvent() {
+                if(game.state.isSleeping || game.state.stats.health <= 0) return;
+                
+                const r = Math.random();
+                let msg = "";
+                
+                if (r < 0.3) {
+                    game.state.coins += 10;
+                    msg = "¡Globli encontró 10 monedas!";
+                    audio.playCoin();
+                } else if (r < 0.5) {
+                    game.state.stats.health -= 5;
+                    msg = "Globli tropezó... -5 Salud";
+                    audio.playSad();
+                } else if (r < 0.7) {
+                    game.state.inventory.food.fruit++;
+                    msg = "¡Un regalo! +1 Fruta";
+                } else {
+                    game.state.stats.hunger += 10;
+                    msg = "Globli olió comida y le dio hambre.";
+                }
+                
+                game.save();
+                game.ui.renderAll();
+                game.ui.msg(msg);
+            },
+
+            ui: {
+                get(id) { return document.getElementById(id); },
+                
+                renderAll() {
+                    const s = game.state;
+                    
+                    // Stats Bars
+                    this.updateBar('health', s.stats.health, '#FF6B6B', '#C0392B');
+                    this.updateBar('hunger', s.stats.hunger, '#F1C40F', '#F39C12', true); // Inverse logic (more hunger is bad)
+                    this.updateBar('happiness', s.stats.happiness, '#3498DB', '#2980B9');
+                    
+                    this.get('coin-val').innerText = s.coins;
+
+                    // Globli State
+                    const g = this.get('globli');
+                    g.className = 'globli-body'; // Reset
+                    
+                    if (s.isSleeping) {
+                        g.classList.add('sleeping');
+                        this.get('zzz-anim').style.opacity = 1;
+                        this.get('btn-sleep').querySelector('span').innerText = "Desvelar";
+                    } else {
+                        this.get('zzz-anim').style.opacity = 0;
+                        this.get('btn-sleep').querySelector('span').innerText = "Dormir";
+                        
+                        // Emotion Logic
+                        if (s.stats.health < 40) g.classList.add('sick');
+                        if (s.stats.happiness < 30 || s.stats.hunger > 70) g.classList.add('sad');
+                        if (s.stats.hygiene < 40) g.classList.add('dirty');
+                    }
+
+                    // Accessories
+                    this.get('acc-hat').style.display = s.wearing.hat ? 'block' : 'none';
+                    this.get('acc-glasses').style.display = s.wearing.glasses ? 'block' : 'none';
+                },
+
+                updateBar(type, val, colorSafe, colorDanger, inverse = false) {
+                    const bar = this.get('bar-' + type);
+                    const txt = this.get('val-' + type);
+                    
+                    // Width
+                    bar.style.width = val + '%';
+                    txt.innerText = val + '%';
+
+                    // Color logic
+                    let isGood = inverse ? val < 50 : val > 50;
+                    bar.style.backgroundColor = isGood ? colorSafe : colorDanger;
+                },
+
+                msg(txt) {
+                    const el = this.get('info-msg');
+                    el.innerText = txt;
+                    el.style.transform = "scale(1.05)";
+                    setTimeout(() => el.style.transform = "scale(1)", 200);
+                },
+
+                // Menus
+                openModal(title, html) {
+                    const m = this.get('modal-content');
+                    const o = this.get('modal-overlay');
+                    m.innerHTML = `
+                        <button class="close-btn" onclick="game.ui.closeModal()">X</button>
+                        <h2>${title}</h2>
+                        ${html}
+                    `;
+                    o.style.display = 'flex';
+                },
+
+                closeModal() {
+                    this.get('modal-overlay').style.display = 'none';
+                },
+
+                openFoodMenu() {
+                    if(game.state.isSleeping) return;
+                    const inv = game.state.inventory.food;
+                    let html = `<div class="item-list">`;
+                    html += this.renderFoodItem('Fruta Galáctica', '🍎', inv.fruit, '+Salud', 'fruit');
+                    html += this.renderFoodItem('Batido Nutri', '🥤', inv.shake, '+Felicidad', 'shake');
+                    html += this.renderFoodItem('Galleta Chispa', '🍪', inv.cookie, '+Energía', 'cookie');
+                    html += `</div>`;
+                    this.openModal('Despensa', html);
+                },
+
+                renderFoodItem(name, icon, qty, effect, type) {
+                    return `
+                    <div class="item-card" onclick="game.actions.feed('${type}')">
+                        <div style="font-size:2rem">${icon}</div>
+                        <h4>${name}</h4>
+                        <p>x${qty} | ${effect}</p>
+                    </div>`;
+                },
+
+                openGamesMenu() {
+                    if(game.state.isSleeping) return;
+                    let html = `
+                        <div id="game-container">
+                            <button class="btn" style="width:100%; margin-bottom:10px" onclick="game.minigames.start(1)">Atrapa la Chispa</button>
+                            <button class="btn" style="width:100%; margin-bottom:10px" onclick="game.minigames.start(2)">Ordena Colores</button>
+                            <button class="btn" style="width:100%; margin-bottom:10px" onclick="game.minigames.start(3)">Saltos Rápidos</button>
+                        </div>
+                    `;
+                    this.openModal('Minijuegos', html);
+                },
+
+                openShop() {
+                    if(game.state.isSleeping) return;
+                    const buy = (item, price, type) => {
+                        if(game.state.coins >= price) {
+                            game.state.coins -= price;
+                            if(type === 'food') game.state.inventory.food[item]++;
+                            if(type === 'item') game.state.inventory[item]++;
+                            if(type === 'acc') game.state.inventory.accessories[item] = true;
+                            
+                            game.save();
+                            game.ui.renderAll();
+                            this.msg("¡Comprado!");
+                            audio.playCoin();
+                            this.openShop(); // Refresh
+                        } else {
+                            this.msg("Sin fondos suficientes");
+                            audio.playSad();
+                        }
+                    };
+                    
+                    // Attach to window for onclick access inside generated HTML strings (hacky but works for single file)
+                    window.buyItem = buy;
+
+                    let html = `<p>Tus Monedas: 💰${game.state.coins}</p><div class="item-list">`;
+                    html += `<div class="item-card" onclick="buyItem('fruit', 15, 'food')"><h4>Fruta</h4><span class="price-tag">15 G</span></div>`;
+                    html += `<div class="item-card" onclick="buyItem('shake', 20, 'food')"><h4>Batido</h4><span class="price-tag">20 G</span></div>`;
+                    html += `<div class="item-card" onclick="buyItem('cookie', 10, 'food')"><h4>Galleta</h4><span class="price-tag">10 G</span></div>`;
+                    html += `<div class="item-card" onclick="buyItem('medkit', 50, 'item')"><h4>Botiquín</h4><span class="price-tag">50 G</span></div>`;
+                    
+                    if(!game.state.inventory.accessories.hat)
+                        html += `<div class="item-card" onclick="buyItem('hat', 30, 'acc')"><h4>Sombrero</h4><span class="price-tag">30 G</span></div>`;
+                    if(!game.state.inventory.accessories.glasses)
+                        html += `<div class="item-card" onclick="buyItem('glasses', 25, 'acc')"><h4>Gafas</h4><span class="price-tag">25 G</span></div>`;
+                        
+                    html += `</div>`;
+                    this.openModal('Tienda', html);
+                },
+
+                openInventory() {
+                    const inv = game.state.inventory;
+                    let html = `<h3>Objetos</h3><div class="item-list">`;
+                    html += `<div class="item-card"><h4>Botiquines</h4><p>x${inv.medkit}</p></div>`;
+                    html += `</div><h3>Ropa</h3><div class="item-list">`;
+                    
+                    if(inv.accessories.hat)
+                        html += `<div class="item-card" onclick="game.actions.toggleWear('hat')"><h4>Sombrero</h4><p>${game.state.wearing.hat ? '(Puesto)' : 'Usar'}</p></div>`;
+                    if(inv.accessories.glasses)
+                        html += `<div class="item-card" onclick="game.actions.toggleWear('glasses')"><h4>Gafas</h4><p>${game.state.wearing.glasses ? '(Puesto)' : 'Usar'}</p></div>`;
+                    
+                    if(!inv.accessories.hat && !inv.accessories.glasses) html += `<p>¡Compra ropa en la tienda!</p>`;
+
+                    html += `</div>`;
+                    this.openModal('Inventario', html);
+                }
+            }
+        };
+
+        // Start Handler
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('start-screen').style.display = 'none';
+            audio.init();
+            game.init();
+        });
+
+    </script>
+</body>
+</html>
